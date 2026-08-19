@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
+import StrokeText from "../../components/Text";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,24 @@ import {
  * compiler only picks up arbitrary-value classes it can see as plain
  * strings, so interpolating BRAND.* into a `bg-[...]` class would silently
  * drop the style in production.
+ *
+ * Pastel two-tone system: peach (#F9C0AF) is the page/section surface
+ * color. Mint (#D3EADA) is the fill for every small interactive accent —
+ * the "Recruitment is ongoing" badge, the "Submit A Request" button, the
+ * active course tab, the wavy divider, and the carousel dots/arrows —
+ * each paired with black text/icons for contrast. `EASE` is the single
+ * motion curve used across every animated element in this section so the
+ * choreography reads as one deliberate system rather than several
+ * mismatched transitions.
  * ---------------------------------------------------------------------*/
 const BRAND = {
-  purple: "#430098",
-  purpleDark: "#37017d",
-  green: "#3bd42e",
+  peach: "#F9C0AF",
+  mint: "#D3EADA",
+  mintDeep: "#BFE0CE", // one step darker than mint, used for hover/pressed states on mint-filled controls
 } as const;
+
+const EASE = "cubic-bezier(0.16,1,0.3,1)"; // signature "ease-out-expo" curve — confident settle, no bounce
+const EASE_CLASS = "ease-[cubic-bezier(0.16,1,0.3,1)]"; // Tailwind arbitrary-value form of EASE
 
 /* -----------------------------------------------------------------------
  * Data
@@ -169,9 +182,12 @@ function usePointerGlow<T extends HTMLElement>() {
 }
 
 /* -----------------------------------------------------------------------
- * Decorative wavy divider
+ * Decorative wavy divider — mint, and now draws itself in (stroke
+ * animates from hidden to fully traced) once the card scrolls into
+ * view, instead of just popping in with the rest of the card. Respects
+ * prefers-reduced-motion via the .wavy-draw rule in the <style> block.
  * ---------------------------------------------------------------------*/
-function WavyDivider({ className }: { className?: string }) {
+function WavyDivider({ className, animate }: { className?: string; animate?: boolean }) {
   return (
     <svg
       viewBox="0 0 120 10"
@@ -180,11 +196,15 @@ function WavyDivider({ className }: { className?: string }) {
       className={cn("h-2.5 w-28", className)}
     >
       <path
+        className="wavy-draw"
         d="M0 5 C 5 0, 10 0, 15 5 S 25 10, 30 5 S 40 0, 45 5 S 55 10, 60 5 S 70 0, 75 5 S 85 10, 90 5 S 100 0, 105 5 S 115 10, 120 5"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
+        strokeDasharray={200}
+        strokeDashoffset={animate ? 0 : 200}
+        style={{ transition: `stroke-dashoffset 900ms ${EASE} 250ms` }}
       />
     </svg>
   );
@@ -196,6 +216,10 @@ function WavyDivider({ className }: { className?: string }) {
  * card. Hover choreography lives in plain CSS gated behind
  * `(hover: hover) and (pointer: fine)` in the <style> block below, so
  * nothing ever gets stuck "hovered" after a tap on iOS/Android.
+ *
+ * Card surface is solid white with a soft peach-tinted resting shadow
+ * (so it already reads as "lifted" off the peach page before any
+ * interaction) that deepens into mint on hover.
  * ---------------------------------------------------------------------*/
 interface PlanCardProps {
   plan: Plan;
@@ -210,7 +234,8 @@ const PlanCard = React.memo(function PlanCard({ plan, index, inView, onSelect }:
   return (
     <div
       className={cn(
-        "h-full transition-[transform,opacity] duration-500 ease-out",
+        "h-full transition-[transform,opacity] duration-500",
+        EASE_CLASS,
         inView ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
       )}
       style={{ transitionDelay: inView ? `${index * 90}ms` : "0ms" }}
@@ -219,32 +244,33 @@ const PlanCard = React.memo(function PlanCard({ plan, index, inView, onSelect }:
         ref={glowRef}
         className={cn(
           "plan-card relative flex h-full flex-col items-center overflow-hidden rounded-[28px] p-7 text-center sm:p-8 lg:rounded-[32px] lg:p-9",
-          "transition-[transform,box-shadow] duration-300 ease-out",
+          "bg-white shadow-[0_4px_20px_-8px_rgba(249,192,175,0.4)] transition-[transform,box-shadow] duration-300",
+          EASE_CLASS,
           plan.featured
-            ? "border-2 border-neutral-900 bg-white"
-            : "border border-[#430098]/12 bg-white"
+            ? "border-2 border-[#D3EADA]"
+            : "border border-[#D3EADA]/40"
         )}
       >
         {/* cursor-tracked glow, desktop pointer only */}
         <span aria-hidden className="plan-card-glow" />
 
-        {/* top accent — solid green only, no gradient */}
+        {/* top accent — solid mint, no gradient */}
         <span
           aria-hidden
-          className="plan-card-accent absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[#3bd42e] transition-transform duration-500 ease-out"
+          className="plan-card-accent absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[#D3EADA] transition-transform duration-500 ease-out"
         />
 
-        {/* subtle green sweep on hover — contained, no bleeding */}
+        {/* subtle mint sweep on hover — contained, no bleeding */}
         <span aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-out plan-card-sweep-wrap">
-          <span className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#3bd42e]/[0.06] to-transparent" />
+          <span className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#D3EADA]/[0.25] to-transparent" />
         </span>
 
         <div className="relative flex h-full w-full flex-col items-center">
-          <Badge className="plan-card-badge mb-6 gap-1.5 rounded-full border-transparent bg-[#3bd42e] px-4 py-1.5 text-sm font-semibold text-neutral-900 transition-transform duration-300">
+          <Badge className="plan-card-badge mb-6 gap-1.5 rounded-full border-transparent bg-[#D3EADA] px-4 py-1.5 text-sm font-bold transition-transform duration-300">
             <span aria-hidden className="plan-card-emoji text-base leading-none transition-transform duration-300">
               🚀
             </span>
-            {plan.badgeText}
+            <span className="text-black">{plan.badgeText}</span>
           </Badge>
 
           <h3 className="mb-6 min-h-[3.5rem] text-balance text-xl font-extrabold uppercase leading-snug tracking-tight text-neutral-900 sm:text-2xl">
@@ -253,14 +279,14 @@ const PlanCard = React.memo(function PlanCard({ plan, index, inView, onSelect }:
 
           <ul className="mb-6 flex w-full max-w-[240px] flex-col items-center gap-2 text-[15px]">
             <li className="flex items-center justify-center gap-2">
-              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#430098]" />
+              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D3EADA]" />
               <span>
                 <span className="font-bold text-neutral-900">{plan.hoursValue}</span>{" "}
                 <span className="text-neutral-500">{plan.hoursLabel}</span>
               </span>
             </li>
             <li className="flex items-center justify-center gap-2">
-              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#430098]" />
+              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D3EADA]" />
               <span>
                 <span className="text-neutral-500">{plan.regFeeLabel}:</span>{" "}
                 <span className="font-bold text-neutral-900">{plan.regFeeValue}</span>
@@ -268,21 +294,21 @@ const PlanCard = React.memo(function PlanCard({ plan, index, inView, onSelect }:
             </li>
           </ul>
 
-          <WavyDivider className="mb-6 text-neutral-300" />
+          <WavyDivider className="mb-6 text-[#D3EADA]" animate={inView} />
 
-          <div className="plan-card-price mb-7 transition-colors duration-300">
-            <p className="text-4xl font-extrabold tracking-tight text-neutral-900 transition-colors duration-300">
+          <div className="plan-card-price mb-7 transition-transform duration-300">
+            <p className="text-4xl font-extrabold tracking-tight text-neutral-900">
               {plan.price}
             </p>
-            <p className="text-sm font-medium text-[#430098]/80">{plan.priceUnit}</p>
+            <p className="text-sm font-medium text-neutral-500">{plan.priceUnit}</p>
           </div>
 
           <Button
             onClick={() => onSelect?.(plan)}
             className={cn(
-              "plan-card-cta mt-auto w-full max-w-[200px] touch-manipulation rounded-full bg-[#430098] py-6 text-[15px] font-semibold text-white",
-              "shadow-[0_10px_25px_-8px_rgba(67,0,152,0.5)] transition-[transform,box-shadow,background-color] duration-300",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430098] focus-visible:ring-offset-2",
+              "plan-card-cta mt-auto w-full max-w-[200px] touch-manipulation rounded-full bg-[#D3EADA] py-6 text-[15px] font-semibold text-black",
+              "shadow-[0_10px_25px_-8px_rgba(163,199,177,0.55),inset_0_1px_0_0_rgba(255,255,255,0.5)] transition-[transform,box-shadow,background-color] duration-300",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C0AF] focus-visible:ring-offset-2",
               "motion-safe:active:scale-95"
             )}
           >
@@ -363,8 +389,8 @@ function PlansGroup({
           className={cn(
             "absolute left-1 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full",
             "border border-neutral-200 bg-white text-neutral-700 shadow-lg backdrop-blur-sm",
-            "transition-colors duration-300 active:bg-[#430098] active:text-white",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430098] focus-visible:ring-offset-2",
+            "transition-colors duration-300 active:bg-[#D3EADA] active:text-black",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C0AF] focus-visible:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-30"
           )}
         >
@@ -379,8 +405,8 @@ function PlansGroup({
           className={cn(
             "absolute right-1 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full",
             "border border-neutral-200 bg-white text-neutral-700 shadow-lg backdrop-blur-sm",
-            "transition-colors duration-300 active:bg-[#430098] active:text-white",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430098] focus-visible:ring-offset-2",
+            "transition-colors duration-300 active:bg-[#D3EADA] active:text-black",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C0AF] focus-visible:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-30"
           )}
         >
@@ -396,8 +422,8 @@ function PlansGroup({
               aria-current={i === selected ? "true" : undefined}
               onClick={() => api?.scrollTo(i)}
               className={cn(
-                "h-2 touch-manipulation rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430098] focus-visible:ring-offset-2",
-                i === selected ? "w-6 bg-[#430098]" : "w-2 bg-neutral-300 active:bg-neutral-400"
+                "h-2 touch-manipulation rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C0AF] focus-visible:ring-offset-2",
+                i === selected ? "w-6 bg-[#D3EADA]" : "w-2 bg-neutral-300 active:bg-neutral-400"
               )}
             />
           ))}
@@ -429,10 +455,10 @@ function PlansGroup({
  * instead of overpowering it.
  * ---------------------------------------------------------------------*/
 const TAB_COLORS = {
-  activeBg: BRAND.green,
+  activeBg: BRAND.mint,
   activeBorder: "transparent",
-  activeText: "#171717", // neutral-900, matches the on-green text used on plan badges
-  activeShadow: "0 6px 16px -4px rgba(59, 212, 46, 0.55)",
+  activeShadow: "0 6px 16px -4px rgba(191, 224, 206, 0.7)",
+  activeText: "#000000",
   idleBg: "#ffffff",
   idleBorder: "#d4d4d4", // neutral-300
   idleText: "#404040", // neutral-700
@@ -456,11 +482,12 @@ function CourseTabs({ activeTab }: { activeTab: string }) {
             key={tab.id}
             value={tab.id}
             className={cn(
-              "course-tab touch-manipulation rounded-full border font-semibold",
+              "course-tab touch-manipulation rounded-full border font-bold",
               "text-xs px-3.5 py-2 sm:text-sm sm:px-5 sm:py-2.5",
-              "transition-[background-color,border-color,color,box-shadow] duration-300 ease-out",
+              "transition-[background-color,border-color,color,box-shadow] duration-300",
+              EASE_CLASS,
               "active:scale-95",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430098] focus-visible:ring-offset-2"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C0AF] focus-visible:ring-offset-2"
             )}
             style={{
               backgroundColor: isActive ? TAB_COLORS.activeBg : TAB_COLORS.idleBg,
@@ -478,6 +505,57 @@ function CourseTabs({ activeTab }: { activeTab: string }) {
 }
 
 /* -----------------------------------------------------------------------
+ * Section heading — same two-tone StrokeText pattern used for
+ * "WHY YO ENGLISH?" in the WhyUs section: two separate StrokeText calls
+ * side by side (StrokeText only takes one color per call, so a two-tone
+ * heading means two instances, not one string). "OUR" renders in near-
+ * black ink; "COURSES" renders in BRAND.mint. Gated on the section's own
+ * `inView` state so `trigger="mount"` fires once, when it scrolls in.
+ * ---------------------------------------------------------------------*/
+function CoursesHeading({ inView }: { inView: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-4" style={{ minHeight: 76 }}>
+      {inView && (
+        <>
+          <StrokeText
+            text="OUR"
+            strokeColor="#171717"
+            fillColor="#171717"
+            strokeWidth={2.2}
+            drawDuration={3.2}
+            fillDelay={0.4}
+            stagger={0.08}
+            ease="power2.out"
+            trigger="mount"
+            fillMode="wipe"
+            fontSize={60}
+            fontWeight={800}
+            letterSpacing={-2}
+            reverse={false}
+          />
+          <StrokeText
+            text="COURSES"
+            strokeColor={BRAND.mint}
+            fillColor={BRAND.mint}
+            strokeWidth={2.2}
+            drawDuration={3.2}
+            fillDelay={0.4}
+            stagger={0.08}
+            ease="power2.out"
+            trigger="mount"
+            fillMode="wipe"
+            fontSize={60}
+            fontWeight={800}
+            letterSpacing={-2}
+            reverse={false}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -----------------------------------------------------------------------
  * Courses section
  * ---------------------------------------------------------------------*/
 export interface CoursesProps {
@@ -489,32 +567,34 @@ export default function Courses({ onSubmitRequest }: CoursesProps) {
   const { ref: sectionRef, inView } = useInViewOnce<HTMLDivElement>();
 
   return (
-    <section id="courses" className="relative w-full overflow-hidden bg-white">
-      {/* Ambient background — contained, low opacity, no bleeding */}
+    <section id="courses" className="relative w-full overflow-hidden bg-[#F9C0AF]">
+      {/* Ambient background — contained, low opacity, no bleeding. Mint
+          blob kept deliberately faint so it reads as a soft accent, not
+          a green tint over the peach surface. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="courses-blob absolute -left-32 -top-32 h-[400px] w-[400px] rounded-full bg-[#430098]/[0.04] blur-[100px]" />
-        <div className="courses-blob courses-blob-delay absolute -bottom-40 -right-24 h-[440px] w-[440px] rounded-full bg-[#3bd42e]/[0.04] blur-[110px]" />
+        <div className="courses-blob absolute -left-32 -top-32 h-[400px] w-[400px] rounded-full bg-white/[0.12] blur-[100px]" />
+        <div className="courses-blob courses-blob-delay absolute -bottom-40 -right-24 h-[440px] w-[440px] rounded-full bg-[#D3EADA]/[0.15] blur-[110px]" />
       </div>
 
       <div ref={sectionRef} className="relative mx-auto max-w-7xl px-3 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10">
-        {/* Heading — "Our" stays neutral, "Courses" = purple #430098 */}
+        {/* Heading — "Our" stays neutral, "Courses" = mint with a soft outline for legibility on the peach section bg */}
         <div
           className={cn(
-            "mx-auto mb-10 max-w-2xl text-center transition-[transform,opacity] duration-700 ease-out sm:mb-12",
+            "mx-auto mb-10 max-w-2xl text-center transition-[transform,opacity] duration-700",
+            EASE_CLASS,
+            "sm:mb-12",
             inView ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           )}
         >
-          <h2 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl">
-            Our <span className="text-[#430098]">Courses</span>
-          </h2>
+          <CoursesHeading inView={inView} />
           <div
             aria-hidden
             className={cn(
-              "courses-underline mx-auto mt-4 h-1 w-16 origin-center rounded-full bg-[#430098]",
+              "courses-underline mx-auto mt-4 h-1 w-16 origin-center rounded-full bg-[#D3EADA]",
               inView && "courses-underline-grow"
             )}
           />
-          <p className="mt-6 text-base leading-relaxed text-neutral-600 sm:text-lg">
+          <p className="mt-6 text-base leading-relaxed text-neutral-700 sm:text-lg">
             Classes are unique, and we are far from traditional. We focus on
             conversation, drilling, pronunciation and self-discovery, by
             understanding WHY as well as how we use language.
@@ -560,13 +640,13 @@ export default function Courses({ onSubmitRequest }: CoursesProps) {
           to { transform: scaleX(1); }
         }
         .courses-blob {
-          animation: coursesFloat 12s ease-in-out infinite;
+          animation: coursesFloat 14s ease-in-out infinite;
         }
         .courses-blob-delay {
-          animation-delay: -6s;
+          animation-delay: -7s;
         }
         .courses-underline-grow {
-          animation: coursesGrow 0.8s ease-out 0.3s both;
+          animation: coursesGrow 0.8s ${EASE} 0.3s both;
         }
 
         /* Remove tap-flash / 300ms delay on touch devices across this section */
@@ -580,7 +660,7 @@ export default function Courses({ onSubmitRequest }: CoursesProps) {
           position: absolute;
           inset: 0;
           opacity: 0;
-          background: radial-gradient(220px circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(59, 212, 46, 0.10), transparent 70%);
+          background: radial-gradient(220px circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(211, 234, 218, 0.55), transparent 70%);
           transition: opacity 0.4s ease;
           pointer-events: none;
         }
@@ -590,17 +670,17 @@ export default function Courses({ onSubmitRequest }: CoursesProps) {
         @media (hover: hover) and (pointer: fine) {
           .plan-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 22px 50px -18px rgba(59, 212, 46, 0.4);
+            box-shadow: 0 22px 50px -18px rgba(211, 234, 218, 0.9);
           }
           .plan-card:hover .plan-card-glow { opacity: 1; }
           .plan-card:hover .plan-card-accent { transform: scaleX(1); }
           .plan-card:hover .plan-card-sweep-wrap { opacity: 1; }
           .plan-card:hover .plan-card-badge { transform: translateY(-2px); }
           .plan-card:hover .plan-card-emoji { transform: rotate(12deg); }
-          .plan-card:hover .plan-card-price p:first-child { color: ${BRAND.purple}; }
+          .plan-card:hover .plan-card-price { transform: scale(1.04); }
           .plan-card-cta:hover {
-            background-color: ${BRAND.purpleDark};
-            box-shadow: 0 14px 32px -8px rgba(67, 0, 152, 0.65);
+            background-color: ${BRAND.mintDeep};
+            box-shadow: 0 14px 32px -8px rgba(163, 199, 177, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
           }
           .plan-card-cta:hover .plan-card-cta-arrow { transform: translateX(4px); }
         }
@@ -617,6 +697,10 @@ export default function Courses({ onSubmitRequest }: CoursesProps) {
           .courses-blob,
           .courses-underline-grow {
             animation: none;
+          }
+          .wavy-draw {
+            transition: none !important;
+            stroke-dashoffset: 0 !important;
           }
         }
       `}</style>

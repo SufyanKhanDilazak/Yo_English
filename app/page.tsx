@@ -6,7 +6,7 @@ import Courses from './components/Courses'
 import ClassDetails from './components/Class'
 import ContactForm from './components/Form'
 import Footer from './components/Footer'
-import ScrollFrameSequence from './components/HeroFrameSequence'
+import Hero from './components/Hero'
 
 
 const page = () => {
@@ -14,12 +14,7 @@ const page = () => {
     <div>
       
       <Navbar/> 
-      <ScrollFrameSequence
-        desktopBasePath="/frames-desktop"
-        mobileBasePath="/frames-mobile"
-        padLength={3}                    // frame_002.webp, not frame_0002.webp
-        ariaLabel="Product rotating to show its key features"
-      />
+    <Hero/>
       <WhyUs/>
       <Courses/>
       <ClassDetails/>

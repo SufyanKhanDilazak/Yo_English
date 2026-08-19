@@ -2,7 +2,22 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import StrokeText from "../../components/Text";
+
+/* -----------------------------------------------------------------------
+ * Palette — continues the cascading pastel system from the other
+ * sections: BG here is the lilac that WhyUs used as its ACCENT, so the
+ * two sections read as one connected story rather than isolated blocks.
+ * ACCENT_DEEP exists only for the StrokeText stroke on "Details" — pure
+ * ACCENT is close in lightness to BG, so a plain gold fill at large size
+ * would read as washed-out; the deeper stroke gives it a defined edge
+ * while the fill itself stays exactly the gold you asked for.
+ * ---------------------------------------------------------------------*/
+const BG = "#D2C7E5";
+const ACCENT = "#F2D894";
+const ACCENT_DEEP = "#C9A227"; // stroke-only — keeps the gold fill legible at headline size
+const INK = "#171717";
 
 /* -----------------------------------------------------------------------
  * Framer Motion Variants — Premium GPU-accelerated easing
@@ -52,16 +67,92 @@ const CLASS_BADGES = [
   "Continuous enrolment",
 ];
 
+// Inline treatment for the "10% discount" phrase sitting inside the body
+// paragraph — same legibility fix as the headline (gold fill, thin dark
+// stroke) but sized down since it's running text, not a display word.
+const goldInlineText: React.CSSProperties = {
+  color: ACCENT,
+  WebkitTextStroke: "0.4px rgba(23, 23, 23, 0.35)",
+  textShadow: "0 1px 1px rgba(23, 23, 23, 0.12)",
+};
+
+/* -----------------------------------------------------------------------
+ * Heading — same two-tone StrokeText pattern as WhyUs's "WHY YO ENGLISH?"
+ * and Courses's "OUR COURSES": two StrokeText instances side by side
+ * ("Class" in ink, "Details" in gold), mounted only once the heading
+ * scrolls into view so `trigger="mount"` fires at the right moment.
+ * ---------------------------------------------------------------------*/
+function ClassHeading() {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.4, margin: "0px 0px -80px 0px" });
+
+  return (
+    <div
+      ref={ref}
+      className="mb-8 flex flex-wrap items-center justify-center gap-4 md:justify-start"
+      style={{ minHeight: 84 }}
+    >
+      {isInView && (
+        <>
+          <StrokeText
+            text="Class"
+            strokeColor={INK}
+            fillColor={INK}
+            strokeWidth={2.2}
+            drawDuration={3.2}
+            fillDelay={0.4}
+            stagger={0.08}
+            ease="power2.out"
+            trigger="mount"
+            fillMode="wipe"
+            fontSize={68}
+            fontWeight={800}
+            letterSpacing={-2}
+            reverse={false}
+          />
+          <StrokeText
+            text="Details"
+            strokeColor={ACCENT_DEEP}
+            fillColor={ACCENT}
+            strokeWidth={2.2}
+            drawDuration={3.2}
+            fillDelay={0.4}
+            stagger={0.08}
+            ease="power2.out"
+            trigger="mount"
+            fillMode="wipe"
+            fontSize={68}
+            fontWeight={800}
+            letterSpacing={-2}
+            reverse={false}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 /* -----------------------------------------------------------------------
  * Class Details Component
  * ---------------------------------------------------------------------*/
 export default function ClassDetails() {
   return (
-    <section id="class-details" className="relative w-full overflow-hidden bg-white py-20 sm:py-24 lg:py-32">
-      {/* Ambient background blobs - extremely subtle */}
+    <section
+      id="class-details"
+      className="relative w-full overflow-hidden py-20 sm:py-24 lg:py-32"
+      style={{ backgroundColor: BG }}
+    >
+      {/* Ambient background blobs — kept faint so they read as soft light,
+          not a competing tint, against the already-saturated lilac bg. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-1/4 h-[500px] w-[500px] rounded-full bg-[#430098]/[0.03] blur-[120px]" />
-        <div className="absolute -right-40 bottom-1/4 h-[550px] w-[550px] rounded-full bg-[#3bd42e]/[0.03] blur-[130px]" />
+        <div
+          className="absolute -left-40 top-1/4 h-[500px] w-[500px] rounded-full blur-[120px]"
+          style={{ background: "rgba(255,255,255,0.18)" }}
+        />
+        <div
+          className="absolute -right-40 bottom-1/4 h-[550px] w-[550px] rounded-full blur-[130px]"
+          style={{ background: `${ACCENT}30` }}
+        />
       </div>
 
       {/* Immersive Edge-to-Edge Container for Desktop */}
@@ -75,19 +166,18 @@ export default function ClassDetails() {
         >
           {/* Left Side: Raw, plain image (No borders, shadows, or overlays) */}
           <motion.div variants={slideInLeft} className="relative w-full">
-            {/* Using a standard aspect ratio. Removed all styling classes. */}
- <div className="relative w-full md:w-[90%] lg:w-[85%]">
-  <Image
-    src="/Class.png"
-    alt="Students engaging in a language class"
-    width={554}
-    height={680}
-    priority
-    sizes="(max-width: 768px) 100vw, 45vw"
-    className="h-auto w-full"
-    quality={90}
-  />
-</div>
+            <div className="relative w-full md:w-[90%] lg:w-[85%]">
+              <Image
+                src="/Class.png"
+                alt="Students engaging in a language class"
+                width={554}
+                height={680}
+                priority
+                sizes="(max-width: 768px) 100vw, 45vw"
+                className="h-auto w-full"
+                quality={90}
+              />
+            </div>
           </motion.div>
 
           {/* Right Side: Content (Centered on mobile, left-aligned on desktop) */}
@@ -96,19 +186,20 @@ export default function ClassDetails() {
             className="flex flex-col items-center text-center md:items-start md:text-left"
           >
             {/* Premium Heading */}
-            <h2 className="mb-8 text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl xl:text-7xl">
-              Class <span className="text-[#430098]">Details</span>
-            </h2>
+            <ClassHeading />
 
-            {/* Modern UI Pills (Centered on mobile) */}
+            {/* Modern UI Pills (Centered on mobile) — dark, legible text;
+                gold reserved for the dot and border so the label itself
+                never drops below a readable contrast. */}
             <div className="mb-10 flex flex-wrap justify-center gap-3 sm:gap-4 md:justify-start">
               {CLASS_BADGES.map((badge) => (
                 <motion.span
                   key={badge}
                   variants={popIn}
-                  className="inline-flex items-center gap-2.5 rounded-full border border-[#430098]/15 bg-[#430098]/[0.03] px-5 py-2.5 text-sm font-semibold text-[#430098] backdrop-blur-sm sm:text-base"
+                  className="inline-flex items-center gap-2.5 rounded-full border bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.08)] sm:text-base"
+                  style={{ borderColor: `${ACCENT_DEEP}55` }}
                 >
-                  <span className="h-2 w-2 rounded-full bg-[#3bd42e]" />
+                  <span className="h-2 w-2 rounded-full" style={{ background: ACCENT }} />
                   {badge}
                 </motion.span>
               ))}
@@ -117,17 +208,20 @@ export default function ClassDetails() {
             {/* Large Readable Paragraph (Centered on mobile) */}
             <motion.p
               variants={slideInRight}
-              className="max-w-xl text-xl leading-relaxed text-neutral-600 sm:text-2xl lg:text-3xl lg:leading-relaxed"
+              className="max-w-xl text-xl leading-relaxed text-neutral-700 sm:text-2xl lg:text-3xl lg:leading-relaxed"
             >
               Pay for the full period upfront and get{" "}
-              <span className="font-bold text-[#430098]">10% discount</span>. 
-              Each period is 3 months. There are 4 periods a year.
+              <span className="font-bold" style={goldInlineText}>
+                10% discount
+              </span>
+              . Each period is 3 months. There are 4 periods a year.
             </motion.p>
 
             {/* Minimalist Divider (Centered on mobile) */}
-            <motion.div 
-              variants={popIn} 
-              className="mt-12 h-1.5 w-24 origin-center rounded-full bg-[#3bd42e] md:origin-left" 
+            <motion.div
+              variants={popIn}
+              className="mt-12 h-1.5 w-24 origin-center rounded-full md:origin-left"
+              style={{ background: ACCENT }}
             />
           </motion.div>
         </motion.div>

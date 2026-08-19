@@ -16,15 +16,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-/* -----------------------------------------------------------------------
- * Brand colors — #430098 (purple) and #3bd42e (green), matching
- * ClassDetails.tsx exactly. Used directly as Tailwind arbitrary values
- * below (Tailwind can't statically detect colors passed through JS
- * variables, so the literal hex codes are kept inline in each className).
- * ---------------------------------------------------------------------*/
+import StrokeText from "../../components/Text";
 
-/** Replace with your real WhatsApp number in international format, no
- *  spaces, dashes, or leading "+" — e.g. "14155552671". */
 const WHATSAPP_NUMBER = "10000000000";
 const WHATSAPP_PREFILL = "Hi! I'd like to know more.";
 
@@ -42,9 +35,8 @@ const AUDIENCE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-/* -----------------------------------------------------------------------
- * Framer Motion variants — same easing curve as ClassDetails.tsx
- * ---------------------------------------------------------------------*/
+const EASE = [0.16, 1, 0.3, 1] as const;
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -58,7 +50,7 @@ const slideInLeft = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.9, ease: EASE },
   },
 };
 
@@ -67,7 +59,7 @@ const slideInRight = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.9, ease: EASE },
   },
 };
 
@@ -77,14 +69,10 @@ const popIn = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.5, ease: EASE },
   },
 };
 
-/* -----------------------------------------------------------------------
- * WhatsApp brand mark — not in lucide-react, so it's a small inline SVG
- * (crisp at any size, zero extra dependency, real brand green).
- * ---------------------------------------------------------------------*/
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" fill="none" className={className} role="img" aria-label="WhatsApp">
@@ -97,22 +85,15 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-/* -----------------------------------------------------------------------
- * Shared field styling — plain HTML controls only (no Radix, no shadcn
- * Form/Select), so there's nothing extra to install or misconfigure.
- * ---------------------------------------------------------------------*/
 const fieldClass =
-  "h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-[15px] text-neutral-800 outline-none transition-colors placeholder:text-neutral-400 focus:border-[#430098] focus:ring-4 focus:ring-[#430098]/10";
+  "h-12 w-full rounded-2xl border border-[#D2C7E5]/30 bg-white pl-11 pr-4 text-[15px] text-neutral-800 outline-none transition-colors placeholder:text-neutral-400 focus:border-[#D2C7E5] focus:ring-4 focus:ring-[#D2C7E5]/25";
 
 const selectClass =
-  "h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-white pl-11 pr-11 text-[15px] text-neutral-800 outline-none transition-colors focus:border-[#430098] focus:ring-4 focus:ring-[#430098]/10";
+  "h-12 w-full appearance-none rounded-2xl border border-[#D2C7E5]/30 bg-white pl-11 pr-11 text-[15px] text-neutral-800 outline-none transition-colors focus:border-[#D2C7E5] focus:ring-4 focus:ring-[#D2C7E5]/25";
 
 const iconClass =
   "pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400";
 
-/* -----------------------------------------------------------------------
- * Form state
- * ---------------------------------------------------------------------*/
 type FormValues = {
   name: string;
   phone: string;
@@ -133,12 +114,39 @@ const initialValues: FormValues = {
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-/* -----------------------------------------------------------------------
- * Form Component
- * ---------------------------------------------------------------------*/
+function useSectionInView<T extends HTMLElement>() {
+  const ref = React.useRef<T | null>(null);
+  const [inView, setInView] = React.useState(false);
+
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, inView } as const;
+}
+
 export default function ContactForm() {
   const [values, setValues] = React.useState<FormValues>(initialValues);
   const [status, setStatus] = React.useState<Status>("idle");
+  const { ref: sectionRef, inView } = useSectionInView<HTMLElement>();
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -151,12 +159,6 @@ export default function ContactForm() {
     e.preventDefault();
     setStatus("submitting");
     try {
-      // TODO: wire this up to your own API route, e.g.
-      // await fetch("/api/contact", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(values),
-      // });
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setStatus("success");
       setValues(initialValues);
@@ -167,17 +169,16 @@ export default function ContactForm() {
 
   return (
     <section
+      ref={sectionRef}
       id="contact-form"
-      className="relative w-full overflow-hidden bg-white py-20 sm:py-24 lg:py-32"
+      className="relative w-full overflow-hidden bg-[#D3EADA] py-20 sm:py-24 lg:py-32"
     >
-      {/* Ambient background blobs — same treatment as ClassDetails.tsx */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-1/4 h-[500px] w-[500px] rounded-full bg-[#430098]/[0.03] blur-[120px]" />
-        <div className="absolute -right-40 bottom-1/4 h-[550px] w-[550px] rounded-full bg-[#3bd42e]/[0.03] blur-[130px]" />
-      </div>
-
       <div className="relative mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-16 xl:px-24">
-        <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white sm:rounded-[2.5rem]">
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="overflow-hidden rounded-[1.75rem] border border-white/60 bg-[#D3EADA] shadow-[0_20px_50px_-24px_rgba(178,201,187,0.55)] sm:rounded-[2.5rem]"
+        >
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -185,11 +186,6 @@ export default function ContactForm() {
             viewport={{ once: true, amount: 0.2 }}
             className="grid grid-cols-1 items-stretch gap-0 md:grid-cols-2"
           >
-            {/* Left: photo, never cropped, no padding on this column — it bleeds flush to
-               the card's left edge at every size, its top edge on mobile (full-width
-               banner), and its bottom edge on desktop (anchored to the corner) via
-               flex + items-end inside the stretched grid row. Already includes its own
-               circles/silhouette artwork, so no extra decoration is layered on top. */}
             <motion.div variants={slideInLeft} className="relative flex md:items-end md:justify-start">
               <Image
                 src="/Form.png"
@@ -203,16 +199,39 @@ export default function ContactForm() {
               />
             </motion.div>
 
-            {/* Right: heading + form — this column keeps the padding, since only the
-               image is meant to bleed to the border */}
             <motion.div
               variants={slideInRight}
               className="flex h-full w-full flex-col items-center justify-center px-6 py-10 text-center sm:px-10 sm:py-10 lg:px-14 lg:py-14 xl:px-16 xl:py-16"
             >
-              <h2 className="max-w-md text-3xl font-extrabold leading-[1.15] tracking-tight text-[#430098] sm:max-w-none sm:text-4xl md:text-5xl lg:text-6xl">
-                We&apos;re Just a Click Away!
-              </h2>
-              <p className="mt-3 text-base font-medium text-[#430098]/60 sm:text-lg">
+              <div
+                role="heading"
+                aria-level={2}
+                aria-label="We're Just a Click Away!"
+                className="flex max-w-md items-center justify-center sm:max-w-none"
+                style={{ minHeight: 56 }}
+              >
+                {inView && (
+                  <span aria-hidden="true">
+                    <StrokeText
+                      text="We're Just a Click Away!"
+                      strokeColor="#D2C7E5"
+                      fillColor="#D2C7E5"
+                      strokeWidth={2.2}
+                      drawDuration={3.2}
+                      fillDelay={0.4}
+                      stagger={0.06}
+                      ease="power2.out"
+                      trigger="mount"
+                      fillMode="wipe"
+                      fontSize={40}
+                      fontWeight={800}
+                      letterSpacing={-1.5}
+                      reverse={false}
+                    />
+                  </span>
+                )}
+              </div>
+              <p className="mt-3 text-base font-medium text-[#D2C7E5]/80 sm:text-lg">
                 Join our team
               </p>
 
@@ -220,7 +239,7 @@ export default function ContactForm() {
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.5, ease: EASE }}
                   className="mt-10 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-[#3bd42e]/30 bg-[#3bd42e]/5 px-6 py-12 text-center"
                 >
                   <CheckCircle2 className="h-10 w-10 text-[#3bd42e]" />
@@ -231,7 +250,7 @@ export default function ContactForm() {
                   <button
                     type="button"
                     onClick={() => setStatus("idle")}
-                    className="mt-4 rounded-full border border-[#430098]/20 px-6 py-2.5 text-sm font-semibold text-[#430098] transition-colors hover:bg-[#430098]/5"
+                    className="mt-4 rounded-full border border-[#D2C7E5]/50 px-6 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-[#D2C7E5]/20"
                   >
                     Send another message
                   </button>
@@ -345,7 +364,7 @@ export default function ContactForm() {
                       required
                       value={values.message}
                       onChange={handleChange}
-                      className="w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 pt-3.5 text-[15px] text-neutral-800 outline-none transition-colors placeholder:text-neutral-400 focus:border-[#430098] focus:ring-4 focus:ring-[#430098]/10"
+                      className="w-full rounded-2xl border border-[#D2C7E5]/30 bg-white pl-11 pr-4 pt-3.5 text-[15px] text-neutral-800 outline-none transition-colors placeholder:text-neutral-400 focus:border-[#D2C7E5] focus:ring-4 focus:ring-[#D2C7E5]/25"
                     />
                   </motion.div>
 
@@ -353,7 +372,10 @@ export default function ContactForm() {
                     variants={popIn}
                     type="submit"
                     disabled={status === "submitting"}
-                    className="flex h-14 w-full items-center justify-center rounded-full bg-[#430098] text-base font-bold text-white transition-transform hover:bg-[#430098]/90 active:scale-[0.99] disabled:opacity-70"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.3, ease: EASE }}
+                    className="flex h-14 w-full items-center justify-center rounded-full bg-[#D2C7E5] text-base font-bold text-neutral-900 shadow-[0_10px_25px_-8px_rgba(210,199,229,0.6)] transition-colors duration-300 hover:bg-[#C3B3DD] disabled:opacity-70"
                   >
                     {status === "submitting" ? (
                       <>
@@ -381,15 +403,28 @@ export default function ContactForm() {
                 href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_PREFILL)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-[#430098]"
+                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 underline decoration-[#D2C7E5]/60 underline-offset-4 transition-colors hover:text-[#8B6FA8]"
               >
                 <WhatsAppIcon className="h-6 w-6" />
                 click to contact us by WhatsApp
               </motion.a>
             </motion.div>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
+
+      <style>{`
+        #contact-form button,
+        #contact-form a {
+          -webkit-tap-highlight-color: transparent;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #contact-form * {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
